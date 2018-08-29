@@ -1,0 +1,428 @@
+<html>
+<head>
+<title>Casey & Saisha's Game</title>
+<link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,500,700,700italic,500italic,300,100' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,900,900italic,700,500' rel='stylesheet' type='text/css'>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+
+<script type="text/javascript">
+        var gameBoardHeight     = 10;
+        var gameBoardWidth      = gameBoardHeight * 2;
+        var gameGrid            = buildGrid(gameBoardHeight, gameBoardWidth);
+        var drawLock            = false;
+        var isAnimating         = false;
+        var canvas              = "";
+        var canvasWidth         = 0       
+        var cellWidth           = 0;
+        var cellHeight          = 0;
+        var canvasHeight        = 0; 
+        var step                = 7; 
+        var angle               = 90;
+        var angleInRadians      = 0; 
+        var spriteMap           = {
+                                    "R": {
+                                            "x":6,
+                                            "y":3,
+                                            "blocking": true,
+                                            "draw": function(x,y)
+                                                    {
+                                                        var rockX = Math.floor(Math.random()*(rockCellsHigh - 0 +1));
+                                                        var rockY = Math.floor(Math.random()*(rockCellsWide - 0 +1));
+                                                        drawSpriteFromSheetToCoords(rocksSheet, x, y, cellWidth, cellHeight, rockX, rockY, rockWidth, rockHeight);
+                                                    }
+                                         }
+                                  };
+       
+        var map1                = [
+                                    {
+                                        "x":5,
+                                        "y":5,
+                                        "repeatX":5,
+                                        "repeatY":1,
+                                        "sprite":"R"
+                                    },
+                                    {
+                                        "x":10,
+                                        "y":8,
+                                        "repeatX":5,
+                                        "repeatY":1,
+                                        "sprite":"R"
+                                    }                                    
+                                 ];
+       
+        var context             = null;
+        var spriteSheet         = new Image();
+            spriteSheet.src     = "basic_sprites.png";
+        var rocksSheet          = new Image();
+            rocksSheet.src      = "rocks_rotated.png";
+        var rockWidth           = 250;
+        var rockHeight          = 250;
+        var rockCellsWide       = 7;
+        var rockCellsHigh       = 7;
+        var p1X                 = 1;
+        var p1Y                 = 1;
+        var op1X                = 1;
+        var op1Y                = 1;
+    
+    function populateMap(mapObj)
+    {
+        for (i = 0; i < mapObj.length; i++)
+        {
+            for (rX = 0; rX <= mapObj[i].repeatX; rX++)
+            {
+                gameGrid[mapObj[i].y][mapObj[i].x+rX] = mapObj[i].sprite;
+                
+                if (typeof spriteMap[mapObj[i].sprite].draw !== 'undefined')
+                {
+                    spriteMap[mapObj[i].sprite].draw(mapObj[i].x+rX,mapObj[i].y);
+                }
+                else
+                {
+                    //default to default spritesheet. (needs fixed)
+                    drawSpriteAtCoordinates(mapObj[i].x+rX,mapObj[i].y, spriteMap[mapObj[i].sprite].x, spriteMap[mapObj[i].sprite].y);                                                                
+                }
+            }
+            
+            for (rY = 0; rY < mapObj[i].repeatY; rY++)
+            {
+                gameGrid[mapObj[i].y+rY][mapObj[i].x] = mapObj[i].sprite;
+                if (typeof spriteMap[mapObj[i].sprite].draw !== 'undefined')
+                {
+                    spriteMap[mapObj[i].sprite].draw(mapObj[i].x,mapObj[i].y+rY);
+                }
+                else
+                {                
+                    drawSpriteAtCoordinates(mapObj[i].x,mapObj[i].y+rY, spriteMap[mapObj[i].sprite].x, spriteMap[mapObj[i].sprite].y);                                                                                
+                }
+            }            
+        }
+    }
+    
+    function animateTank(x,y,steps,currStep,duration)
+    {
+        var bop1X       = op1X;
+        var bop1Y       = op1Y;
+        var directionX  = x!=p1X?(x > Math.floor(op1X)?1:-1):0;
+        var directionY  = y!=p1Y?(y > Math.floor(op1Y)?1:-1):0;        
+        var stepByX     = (directionX*parseFloat((1/steps).toFixed(2)));
+        var stepByY     = (directionY*parseFloat((1/steps).toFixed(2)));
+        
+        if (1==1) //op1X != x)
+        {
+            if (1==1) //x > Math.floor(op1X))
+            {
+                //console.log(op1X,x,steps,currStep,stepBy);
+                //moving right
+                if (currStep < steps)                
+                {
+                    isAnimating = true;
+                    setTimeout(function()
+                               {
+                                    
+                                    //var stepBy = parseFloat(((x - op1X)/steps).toFixed(2));
+                                    moveTank(op1X + (stepByX*(currStep+1)) ,op1Y + (stepByY*(currStep+1)));
+                                    
+                                    if (currStep+1 < steps)
+                                    {
+                                        op1X = bop1X;
+                                        op1Y = bop1Y;
+                                    }
+                                    
+                                    animateTank(x,y,steps,++currStep,duration);
+                               }
+                               , duration/steps);
+                }
+                else
+                {
+                    p1X = Math.ceil(p1X);
+                    p1Y = Math.ceil(p1Y);
+                    moveTank(p1X, p1Y);
+                    isAnimating = false;
+                }
+            }
+            else if (x < op1X)
+            {
+                //moving left
+            }
+        }
+        else if (op1Y != y)
+        {
+        }
+        else
+        {
+            moveTank(x,y);
+        }
+    }
+    
+    function moveTank(x, y)
+    {
+        op1X = p1X;
+        op1Y = p1Y;
+
+        p1X  = x>gameBoardWidth?0:x<=0?gameBoardWidth:x;
+        p1Y  = y>gameBoardHeight?0:y<=0?gameBoardHeight:y;
+//        if (!(typeof gameGrid[testY] !== 'undefined' && typeof spriteMap[gameGrid[testY][testX]] !== 'undefined' && spriteMap[gameGrid[testY][testX]].blocking))
+//        {
+//            p1X = tp1X;
+//            p1Y = tp1Y;
+//        }
+        drawTank();
+
+    }
+    
+    function drawSpriteFromSheetToCoords(sheet,destX,destY,destWidth,destHeight,sourceX,sourceY, sourceWidth, sourceHeight)
+    {
+        context.save();
+        context.translate((destWidth*destX)-(destWidth/2), (destHeight*destY)-(destHeight/2));
+                context.fillStyle="#ffffff";
+                context.fillRect((-destWidth/2)+1,(-destHeight/2)+1,destWidth-2,destHeight-2);
+        context.rotate(angleInRadians);
+        context.drawImage(sheet,sourceWidth*sourceX,sourceHeight*sourceY,sourceWidth,sourceHeight,-destWidth/2,-destHeight/2,destWidth,destHeight);
+        context.restore();     
+    }
+    
+
+    function drawSpriteAtCoordinates(x,y,sx,sy)
+    {
+        context.save();
+        context.translate((cellWidth*x)-(cellWidth/2), (cellHeight*y)-(cellHeight/2));
+                context.fillStyle="#ffffff";
+                context.fillRect((-cellWidth/2)+1,(-cellHeight/2)+1,cellWidth-2,cellHeight-2);
+        context.rotate(angleInRadians);
+        context.drawImage(spriteSheet,84*sx,84*sy,84,84,-cellWidth/2,-cellHeight/2,cellWidth,cellHeight);
+        context.restore();     
+    }
+    
+    function drawTank()
+    {
+        drawLock = true;
+        context.save();
+        //context.setTransform(1,0,0,1,0,0);
+        angleInRadians =  angle* Math.PI / 180;
+        context.translate((cellWidth*op1X)-(cellWidth/2), (cellHeight*op1Y)-(cellHeight/2));
+                context.fillStyle="#ffffff";
+                context.fillRect((-cellWidth/2)+1,(-cellHeight/2)+1,cellWidth-2,cellHeight-2);
+        context.restore();
+        context.save();
+        context.translate((cellWidth*p1X)-(cellWidth/2), (cellHeight*p1Y)-(cellHeight/2));
+                context.fillStyle="#ffffff";
+                context.fillRect((-cellWidth/2)+1,(-cellHeight/2)+1,cellWidth-2,cellHeight-2);
+        context.rotate(angleInRadians);
+        context.drawImage(spriteSheet,84*step,0,84,84,(-cellHeight/2),(-cellWidth/2),cellHeight-1,cellWidth-1);
+        context.restore(); 
+        if (step - 1 <= 0)
+        {
+            step = 8;
+        } 
+        
+        step--; 
+        /*setTimeout( function()
+                    {
+                        drawTank();
+                    },500);*/
+        drawLock = false;
+    }
+    
+    function drawSprite()
+    {
+        context.drawImage(spriteSheet,0,0);
+    }
+    
+    function drawGrid(height, width)
+    {
+
+        cellWidth  = canvasWidth / width;
+        cellHeight = canvasHeight / height;
+
+        /*context.imageSmoothingEnabled= false;
+        for (x = 0; x < canvasWidth; x +=cellWidth)
+        {
+            
+            context.beginPath();
+            context.moveTo(x,0);
+            context.lineTo(x, canvasHeight);
+            context.stroke();
+        }
+        
+        for (y = 0; y < canvasHeight; y += cellHeight)
+        {
+            
+            context.beginPath();
+            context.moveTo(0,y);
+            context.lineTo(canvasWidth,y);
+            context.stroke();
+        }   */     
+    }
+
+
+    function buildGrid(pixelsHigh, pixelsWide)
+    {
+        var newGrid = new Array(pixelsHigh);
+        
+        for (i = 0; i < pixelsHigh; i++)
+        {
+            newGrid[i] = new Array(pixelsWide);
+        }
+        
+        return newGrid;
+    }
+    
+    //https://stackoverflow.com/questions/966225/how-can-i-create-a-two-dimensional-array-in-javascript/966938#966938
+    //Matthew Crumley
+    function createArray(length) 
+    {
+        var arr = new Array(length || 0),
+              i = length;
+
+        if (arguments.length > 1) 
+        {
+            var args = Array.prototype.slice.call(arguments, 1);
+            while(i--)
+            {
+                arr[length-1 - i] = createArray.apply(this, args);
+            }
+        }
+
+        return arr;
+    }
+    
+    function buildGridR(dims)
+    {
+        var newArr = new Array(dims[0]);
+        var i      = 0;
+        
+        if (dims.length > 1) //So long as we're not on the last dimension
+        {
+           newArr   = new Array(dims[0]);
+           i        = dims[0];
+           
+           while(i--)
+           {
+                newArr[i] = buildGridR(dims.slice(1));
+           };
+           
+           return newArr;
+        }
+
+        return new Array(dims[0]);
+    }    
+    
+    $(document).ready(  
+                        function()
+                        {
+                            canvas              = document.getElementById("gameBoard");
+                            
+                            //canvas.width        = document.body.clientWidth;
+                            //canvas.height       = document.body.clientHeight - $(".gameTitle").height();
+                            
+                            canvasWidth         = $(canvas).width();
+                            canvasHeight        = $(canvas).height();        
+                            context             = canvas.getContext('2d');
+                            spriteSheet         = new Image();
+                            spriteSheet.src     = "./basic_sprites_xp.png";     
+                            rocksSheet          = new Image();
+                            rocksSheet.src      = "./rocks_rotated.png";
+                            
+                            
+                             drawGrid(gameBoardHeight,gameBoardWidth,"gameBoard");
+                             setTimeout(    function()
+                                            {
+                                                drawTank();
+                                                populateMap(map1);
+                                            },1500);
+                                            
+                            //"38+40+37+39+66+65+91",
+                            $("body").on("keydown",
+                                            function(e)
+                                            {
+                                                var nX = p1X;
+                                                var nY = p1Y;
+                                                
+                                                if (!isAnimating)
+                                                {
+                                                    e = e.originalEvent;
+                                                    
+                                                    switch(e.keyCode)
+                                                    {
+                                                        case 38:
+                                                            angle = 0;
+                                                            nY--;
+                                                        break;
+                                                        
+                                                        case 40:
+                                                            angle = 180;
+                                                            nY++;                                                        
+                                                        break; 
+
+                                                        case 37:
+                                                            angle = 270;
+                                                            nX--;                                                        
+                                                        break;
+                                                        
+                                                        case 39:
+                                                            angle = 90;
+                                                            nX++;
+                                                        break;                                                        
+                                                    }
+                                                   
+                                                    animateWithTest(nX,nY);                                                        
+                                                }
+                                            }
+                                        );
+                        }
+                     );
+                     
+function animateWithTest(x,y)                     
+{
+    if (isDestinationBlocking(x,y))
+    {
+        x = p1X;
+        y = p1Y;
+    }
+    
+    animateTank(x,y,10,0,150);                                                        
+}
+function isDestinationBlocking(x,y)
+{
+    var isBlocking = false;
+    
+    if (typeof gameGrid[y] !== 'undefined' && typeof spriteMap[gameGrid[y][x]] !== 'undefined')
+    {
+        isBlocking = spriteMap[gameGrid[y][x]].blocking   
+    }
+
+ return isBlocking;
+
+}                     
+</script>
+
+<style type="text/css">
+    html,body {
+        font-family: 'Roboto Mono', sans-serif;
+    }
+
+    .gameBoard {
+        /*width:100%;
+        height:100%;*/
+        /*border:1px solid black;*/
+        /*border-radius:10px;*/
+        padding:0;
+        margin:0;
+    }
+</style>
+</head>
+<body>
+<form>
+    <label for="myThing">hiiiiii</label>
+    <input type="checkbox" id="myThing" >
+    <label for="myThing">hiiiiii</label>
+</form>
+<h1 class="gameTitle">Here a game will oneday be!</h1><br>
+<div style="display:block;width:100%;height:100%;position:absolute;">
+<center>
+<canvas class="gameBoard" id="gameBoard" style="border:1px solid black;margin:auto 0;" width="1400" height="800">
+</canvas>
+</center>
+</div>
+</body>
+</html>

@@ -1,0 +1,197 @@
+<html>
+<head>
+<title>Casey & Saisha's Game</title>
+<link href='https://fonts.googleapis.com/css?family=Roboto+Mono:400,500,700,700italic,500italic,300,100' rel='stylesheet' type='text/css'>
+<link href='https://fonts.googleapis.com/css?family=Roboto:400,300,100,900,900italic,700,500' rel='stylesheet' type='text/css'>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+
+<script type="text/javascript">
+   
+    $(document).ready(  
+                        function()
+                        {
+                        }
+                     );
+                     
+var spriteMap           = {
+                            "R": {
+                                    "x":6,
+                                    "y":3,
+                                    "blocking": true,
+                                    "draw": function(x,y)
+                                            {
+                                                var rockX = Math.floor(Math.random()*(rockCellsHigh - 0 +1));
+                                                var rockY = Math.floor(Math.random()*(rockCellsWide - 0 +1));
+                                                drawSpriteFromSheetToCoords(rocksSheet, x, y, cellWidth, cellHeight, rockX, rockY, rockWidth, rockHeight);
+                                            }
+                                 }
+                          };                     
+                     
+
+                     
+class Map 
+{
+    constructor(height, width, spriteMap)
+    {
+        this.map        = [[]];
+        this.height     = 0;
+        this.width      = 0;    
+        this.height     = height;
+        this.width      = width;
+        this.spriteMap  = spriteMap;
+        this.map        = this.BuildGrid(height, width);
+    }
+    
+    get Size()
+    {
+        return {"width":this.width, "height":this.height};
+    }
+    
+    get Map()
+    {
+        return this.map;
+    }
+    
+    SetTileValue(x,y, val)
+    {
+        this.map[y][x] = val;
+    }
+
+    GetTileValue(x,y)
+    {
+        return this.map[y][x];
+    }
+
+    
+    IsPositionBlocked(x,y)
+    {
+        var val = this.GetTileValue(x,y);
+            
+        //A B tile means Blocked.
+        return (typeof this.spriteMap !== 'undefined' && typeof this.spriteMap[val] !== 'undefined'?this.spriteMap[val].blocking:false);
+    }
+    
+    BuildGrid(hight, width)
+    {
+        var newGrid = new Array(hight);
+        
+        for (var i = 0; i < hight; i++)
+        {
+            newGrid[i] = new Array(width);
+            
+            for (var j = 0; j < width; j++)
+            {
+                newGrid[i][j] = "0";
+            }
+        }
+        
+        return newGrid;
+    }
+    
+    
+};                     
+
+class Tank 
+{
+    
+    constructor(map)
+    {
+        //Data Members (Properties)
+        this.map            = {};
+        this.name           = "";
+        this.hitPoints      = 1;
+        this.lives          = 1;    
+        this.score          = 0;
+        this.position       = {
+                                "x":0, 
+                                "y":0
+                              };
+        this.amunition      = -1;           //-1 Means Unlimited
+        this.movementSpeed  = 10;
+        this.animationFrame = 0;
+        this.spriteSheet    = "";    
+        this.map            = map;
+        this.Move(this.position.x, this.position.y);
+    }
+    
+    get Name()
+    {
+        return this.name;
+    }
+
+    get Score()
+    {
+        return this.score;
+    }
+
+    get Position()
+    {
+        return this.position;
+    }
+    
+    set Position(pos)
+    {
+        this.position = pos;
+    }
+
+    Move(x,y)
+    {
+        if (!this.map.IsPositionBlocked(x,y))
+        {
+            this.map.SetTileValue(this.position.x,this.position.y,"0"); //Must remember that the player can cross certain 
+                                                                        //tiles and we will need to ensure out map can house
+                                                                        //multiple objects on one tile.
+            this.map.SetTileValue(x,y,"1");
+            this.position = {"x":x,"y":y};
+        }
+        else
+        {
+        }
+    }
+
+};                     
+                     
+//Unit Tests
+var spriteMap           = {
+                            "R": {
+                                    "x":6,
+                                    "y":3,
+                                    "blocking": true,
+                                    "draw": function(x,y)
+                                            {
+                                                var rockX = Math.floor(Math.random()*(rockCellsHigh - 0 +1));
+                                                var rockY = Math.floor(Math.random()*(rockCellsWide - 0 +1));
+                                                drawSpriteFromSheetToCoords(rocksSheet, x, y, cellWidth, cellHeight, rockX, rockY, rockWidth, rockHeight);
+                                            }
+                                 }
+                          };  
+                          
+var gameBoard = new Map(10,10, spriteMap);
+var player1   = new Tank(gameBoard);
+
+//Ensure the game grid is of the appropriate height and width and is reporting Size as it should.
+console.assert(gameBoard.Size.width == 10 && gameBoard.Size.height == 10, "Map Does Not Report The Correct Size.");
+
+//Set the value of x=5, y=5 in the game grid to "R" which should be a blocking tile as specified in the spriteMap.
+gameBoard.SetTileValue(5,5,"R");                     
+
+//Make sure that the value at X=5,Y=5 is R as it should be.
+console.assert(gameBoard.GetTileValue(5,5) == "R", "Map Does Not Report Correct Value At Specified X,Y");
+//Then, ensure that it reports Blocking as it should.
+console.assert(gameBoard.IsPositionBlocked(5,5), "Map Does Not Indicate Blocked Tile Where It Should.");
+          
+//Move the player to position x=1,y=1
+player1.Move(1,1);
+//Make sure that the players position is updated to the new location and the player shows on the game grid at x=1, y=1
+console.assert(player1.position.x == 1 && player1.position.y == 1 && gameBoard.GetTileValue(player1.position.x, player1.position.y) == "1", "Map Does Not Indicate Player At Specified Location");
+//Make sure the player was MOVED to x=1, y=1 and the original tile is reset to 0
+console.assert(gameBoard.GetTileValue(0,0) != "1", "Player should no longer be on this tile.  Expected 0 here got 1.");
+
+</script>
+
+<style type="text/css">
+</style>
+</head>
+<body>
+</body>
+</html>
